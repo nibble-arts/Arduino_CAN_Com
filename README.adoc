@@ -5,6 +5,7 @@ This library is designed to integrate CAN communication in own projects in a sim
 It uses the extended identifier with 29 bits. The basic 11 bits are provided when calling the send method, in the 18 additional bits of the extended identifier a unique id of the MCU is automatically added to distinguish equal messages from different nodes.
 
 The read method can register filters to simply select different commands from the data stream. If a message is accepted a message structure is returned with the parsed information of the message:
+
 * identifier: (11 bits)
 * uuid: (18 bit unique identifier from the sending node)
 * size: county of data bytes

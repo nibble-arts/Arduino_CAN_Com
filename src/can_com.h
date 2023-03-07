@@ -17,6 +17,8 @@
 #include <CAN.h>
 #include <simpletimeout.h>
 
+#include "intelliled.h"
+
 
 /*
  * CAN speeds
@@ -49,12 +51,13 @@ class CAN_COM {
     CAN_COM(void); // construct with default CS and INT port
     CAN_COM(uint8_t CS, uint8_t INT); // user CS and INT ports
 
-    bool begin(long speed); // start communication with speed setting
+    bool begin(long speed, uint8_t led_port); // start communication with speed setting and status LED
     bool alive(void);
     void set_alive(uint16_t alive_timeout); // set alive timeout
 
     bool send(byte* data, byte length, uint32_t id); // send data
     
+    bool clear_filter();
     bool register_filter(uint16_t mask, uint16_t filter); // add mask and filter
     uint16_t read(CAN_MESSAGE* message); // receive data > true if no filter or filter match
 
@@ -74,6 +77,7 @@ class CAN_COM {
     SIMPLETIMEOUT _alive_timeout;
     bool _alive;
 
+    INTELLILED _led;
 };
 
 #endif

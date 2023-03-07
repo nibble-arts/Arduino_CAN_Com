@@ -39,7 +39,11 @@ CAN_COM::CAN_COM(uint8_t CS, uint8_t INT) {
 
 
 
-bool CAN_COM::begin(long speed) {
+bool CAN_COM::begin(long speed, uint8_t led_port) {
+
+  // init status LED
+  _led.begin(led_port);
+  _led.on();
 
   // start the CAN bus
   #ifdef DEBUG
@@ -50,10 +54,14 @@ bool CAN_COM::begin(long speed) {
   
   while (!CAN.begin(speed)) {
 
+    _led.on();
+
     #ifdef DEBUG
       Serial.println("Starting CAN failed!");
     #endif
 
+    delay(250);
+    _led.off();
     delay(1000);
   }
 
@@ -61,16 +69,19 @@ bool CAN_COM::begin(long speed) {
     Serial.println("OK!");
   #endif
 
-  _filter_count = 0;
-
+  clear_filter();
+  
   set_alive(CAN_ALIVE_TIMEOUT);
+
+  delay(150);
+  _led.off();
 
   return true;
 }
 
 
 void CAN_COM::create_uuid(void) {
-  _uuid = rokkit((char*) UniqueID8, 8) & 0x3FFFF;
+  _uuid = rokkit((char*) UniqueID8, 8) & 0xFFFF; // 0x3FFFF
 }
 
 
@@ -108,14 +119,12 @@ bool CAN_COM::send(uint8_t* data, uint8_t length, uint32_t id) {
   // 18 bit: board uuid
   CAN.beginExtendedPacket((id << 18) | _uuid);
 
-
   // send data with length
   // restrict to 8 uint8_ts
   while (i < length && i < 8) {
     CAN.write(data[i++]);  
   }
-  
-  // CAN.endPacket();
+
   CAN.endPacket();
 
   return true;
@@ -140,19 +149,18 @@ uint16_t CAN_COM::read(CAN_MESSAGE* message) {
   // check for package
   size = CAN.parsePacket();
 
-
   // received a packet
   if (size) {
 
+    _led.on();
 
     // retrigger connection timeout
     _alive_timeout.retrigger();
 
 
     // fetch data
-    i = 0;        
+    i = 0;
     while (CAN.available() && i < 8) {
-
       message->data[i++] = (uint8_t)CAN.read();
     }
 
@@ -176,10 +184,9 @@ uint16_t CAN_COM::read(CAN_MESSAGE* message) {
       message->uuid = 0;
     }
     
-
     // check for filter criteriy
     if (_filter_count == 0) {
-      return true;
+      return message->id;
     }
 
     // check for registered filters
@@ -188,14 +195,21 @@ uint16_t CAN_COM::read(CAN_MESSAGE* message) {
 
       // filter found
       if ((message->id & _masks[i]) == _filters[i]) {
-        return true;
+        return _filters[i];
       }
 
       i++;
     }
+
+    _led.off();
   }
 
   return false;
+}
+
+
+bool CAN_COM::clear_filter() {
+  _filter_count = 0;
 }
 
 
